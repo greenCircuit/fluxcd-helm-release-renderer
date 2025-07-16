@@ -1,7 +1,7 @@
 #!/bin/bash
 # TODO: put path for predefined repos here
 fluxSystem="${LAB_PATH}"   # absolute path to flux-system cluster
-OUTPUT_DIR="output"        # where want to put generated files
+export OUTPUT_DIR="rendered_files"        # where want to put generated files
 
 file=''
 print_usage() {
@@ -10,25 +10,25 @@ print_usage() {
 while getopts 'f:p:n:h' flag; do
   case "${flag}" in
     f) file="${OPTARG}" ;;  # what file want to check
-    p) path="${OPTARG}" ;;  # if using local gitrepo can put path to where gitRepo is located
-    n) name="${OPTARG}" ;;  # optional rended only if name of helm releases matches this, need if have multiple hr inside a file
+    p) GIT_PATH="${OPTARG}" ;;  # if using local gitrepo can put path to where gitRepo is located
+    n) name="${OPTARG}" ;;  # TODO optional rended only if name of helm releases matches this, need if have multiple hr inside a file
     *) print_usage
        exit 1 ;;
   esac
 done
 
 echo "File:               ${file}"
-echo "Path:               ${path}"
+echo "Path:               ${GIT_PATH}"
 echo "Name:               ${name}"
 
 # render gitrepo assuming that gitrepo is already cloned on host
 renderGitRepoLocal() {
   fullPath=${1}
   echo "Full path:                        ${fullPath}"
-  helm template -f "${fullPath}/values.yaml" -f tempVals.yaml "${fullPath}" > hrTemplated.yaml
-  helm template -f "${fullPath}/values.yaml"  "${fullPath}" > originalHelm.yaml
-  diff hrTemplated.yaml  originalHelm.yaml > diff.diff
-  cat hrTemplated.yaml
+  helm template -f "${fullPath}/values.yaml" -f "${OUTPUT_DIR}/tempVals.yaml" "${fullPath}" > "${OUTPUT_DIR}/hrTemplated.yaml"    # rendering hel chart with helm release provided values
+  helm template -f "${fullPath}/values.yaml"  "${fullPath}" > "${OUTPUT_DIR}/originalHelm.yaml"                                 # rendering helm chart with default values
+  diff "${OUTPUT_DIR}/hrTemplated.yaml"  "${OUTPUT_DIR}/originalHelm.yaml" > "${OUTPUT_DIR}/diff.diff"                                                          # seeing what diffs between original and what is going to be rendered
+  cat ${OUTPUT_DIR}/hrTemplated.yaml
 }
 
 renderHelmRepo() {
@@ -48,7 +48,7 @@ renderHelmRepo() {
   helm template "${sourceName}/${chartPath}"
 }
 
-yq -s  ' "${OUTPUT_DIR}/doc_" + $index + ".yaml"' "${file}"  # outputs split files to temporary dir
+yq -s  ' "'${OUTPUT_DIR}'/doc_" + $index + ".yaml"' "${file}"  # outputs split files to temporary dir
 for splitFile in "${OUTPUT_DIR}"/*; do
   kind=$(yq '.kind' "${splitFile}")
   echo "${kind}"
@@ -64,16 +64,16 @@ for splitFile in "${OUTPUT_DIR}"/*; do
     echo "name:                              ${sourceName}"
     echo "Source ns:                         ${sourceNameSpace}"
     echo Values found
-    # yq '.spec.values' "${file}"
-    # file=$(yq  '.spec.values' "${file}")
-    # echo "${file}" > tempVals.yaml
+    yq '.spec.values' "${file}"
+    file=$(yq  '.spec.values' "${file}")
+    echo "${file}" > "${OUTPUT_DIR}/tempVals.yaml"
 
 
 
     # logic to determine how to handle different sources
     if [[ "$type" == "GitRepository" ]]; then
       echo Found gitRepo
-      renderGitRepoLocal "${fluxSystem}/${chartPath}"
+      renderGitRepoLocal "${GIT_PATH}/${chartPath}"
     elif [[ "$type" == "HelmRepository" ]]; then
       echo Found helmRepo
       renderHelmRepo "${sourceName}" "${chartPath}" "${sourceNameSpace}"

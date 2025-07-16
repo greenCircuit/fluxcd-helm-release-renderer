@@ -1,8 +1,8 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: istio-base
-  namespace: istio-system
+  name: single-hr 
+  namespace: istio-system-single
 spec:
   interval: 5m
   chart:

@@ -1,7 +1,7 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: istio
+  name: istio-helmrepository
   namespace: istio-system
 spec:
   interval: 600m
@@ -10,8 +10,8 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: istio-base
-  namespace: istio-system
+  name: nested-hr
+  namespace: istio-system-nested
 spec:
   interval: 5m
   chart:
